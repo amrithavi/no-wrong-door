@@ -143,3 +143,21 @@ one comma, `"LAST, First"` format. A name with a suffix, a hyphenated
 surname with its own comma, or no comma at all will parse wrong rather
 than fail loudly — it won't throw, it'll just produce a bad `FullName`.
 Flagging this now rather than after it's found in testing.
+
+## Resident Index Adapter
+
+**Chosen:** `GetByIdAsync` maps REST responses to `SourceStatus` directly —
+200 → `Ok`, 404 → `Empty`, JSON parse failure → `Malformed`, network
+failure → `Unavailable`. `SearchAsync` pages through the full result set,
+dedupes by `SourceId` via a `Dictionary`, then filters in-memory by
+name/dob, since the service exposes no server-side search.
+
+**Known cost, accepted for now:** every search call pages through all 27
+pages regardless of match count, because dedup requires seeing the full
+set anyway. Acceptable at 620 records; would need revisiting if the source
+were larger.
+
+**Verified against the live service, not assumed:** no duplicate
+`SourceId`s across full pagination; both known boundary-duplicate IDs
+(`R-10594`, `R-10057`) present exactly once; unknown ID returns `Empty`.
+Confirmed via terminal logs that all 27 pages were actually hit, twice.
