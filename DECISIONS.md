@@ -214,3 +214,43 @@ specific connection-failure reason, response stayed HTTP 200 — never a
 bare error, never a silently-empty result standing in for a real
 failure. Restarted the service, confirmed normal `ok`/`ok` resumed on
 both sources.
+
+## Phase 4 — Floor Verification
+
+Ran the floor checklist explicitly rather than assuming prior phases
+covered it implicitly.
+
+- **Idempotency:** same `GET /resident/{source}/{id}` fired twice returns
+  byte-identical JSON. Confirmed live.
+- **Empty vs. unavailable:** a non-matching search returns `Empty` on both
+  sources, never conflated with `Unavailable`. Confirmed live.
+- **Source down vs. silently empty:** re-confirmed from Phase 3 (stopping
+  the XML service mid-session preserved REST results, correctly flagged
+  `benefits_register: unavailable`) as part of the formal pass rather than
+  left as incidentally covered.
+- **Malformed XML doesn't crash:** deterministic unit test
+  (`ParseRecordElement_MissingField_ReturnsMalformedNotThrow`) feeds a
+  hand-crafted `<Record>` missing four fields; confirms `Malformed`, not
+  an exception. Deliberately independent of the live service's random
+  failure rate, since malformed-XML handling is a parsing concern, not a
+  network one.
+- **REST pagination duplicates:** carried forward from Phase 2a
+  (`R-10594`/`R-10057` present exactly once across full pagination), not
+  re-run here.
+- **Routing regression for slash-containing refs:** the `{id}` → `{*id}`
+  fix from Phase 3 had only been checked manually and at the adapter
+  level, neither of which would catch a regression in the route itself.
+  Added `ResidentControllerRouteTests.cs`, which hits the actual routed
+  HTTP endpoint with a real slash-containing ref and asserts `Ok` — the
+  one test in the suite that requires the API itself running, not just
+  the mock services, since it's specifically proving routing behavior.
+
+**Test suite integrity:** the scaffold's placeholder test
+(`UnitTest1.cs`, `Assert.Pass()`, no assertions) was deleted rather than
+left in the count. It had already been flagged once as something the
+agent cited as "verification" that proved nothing; keeping it would have
+inflated the test count without adding meaning.
+
+All 9 tests are real and pass. Floor proven against live services, live
+routing, and deterministic unit tests — not assumed from build success
+or agent-reported "tests passed" summaries alone.
