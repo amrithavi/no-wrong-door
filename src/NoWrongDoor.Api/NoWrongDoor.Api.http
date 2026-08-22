@@ -1,0 +1,6 @@
+@NoWrongDoor.Api_HostAddress = http://localhost:5220
+
+GET {{NoWrongDoor.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/NoWrongDoor.Adapters/NoWrongDoor.Adapters.csproj" />
+    <Project Path="src/NoWrongDoor.Api/NoWrongDoor.Api.csproj" />
+    <Project Path="src/NoWrongDoor.Core/NoWrongDoor.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/NoWrongDoor.Tests/NoWrongDoor.Tests.csproj" />
+  </Folder>
+</Solution>
