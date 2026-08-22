@@ -46,3 +46,10 @@ directly rather than trusting either the agent's or the author's reading
 of the source. Distinct from the earlier placeholder-test issue: that one
 was a test-quality problem, this one was a real implementation bug the
 test suite was strong enough to catch.
+
+Phase 3's agent-reported "all tests passed" covered zero new tests — no
+automated test exists that simulates a source going down mid-request.
+The degradation proof (stopping the live XML service, checking the
+response, restarting it) was done manually rather than relying on
+build/test output, consistent with the same verification habit from
+Phase 2.

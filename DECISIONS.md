@@ -179,3 +179,38 @@ search→lookup confirmed the URL-encoding actually works end to end, and
 exception — confirming the retry/timeout path is genuinely exercised
 against the service's real ~15% failure rate, not just reachable in
 theory.
+
+## Assembly Layer
+
+**Chosen:** adapters registered via `AddHttpClient`, bound to
+`IResidentSource`/`IBenefitsSource` — the controller depends only on the
+interfaces, never the concrete adapters. `GET /resident/{source}/{id}`
+routes to the matching adapter's lookup; unknown `source` → HTTP 400;
+every `SourceStatus` outcome (Ok/Empty/Malformed/Unavailable) returns
+HTTP 200, since all four are valid API responses, not API failures.
+`GET /residents/search` calls both adapters concurrently via
+`Task.WhenAll` so XML latency doesn't serialize behind REST, returns a
+flat `candidates` list plus a `sources_status` object, always HTTP 200.
+`GET /health` checks both sources' real health endpoints.
+
+**Bug found and fixed:** the lookup route was `resident/{source}/{id}`, a
+plain segment parameter. Benefits refs contain slashes
+(`AS/2024/4702`), which ASP.NET Core's routing splits on before the
+value reaches the controller — every real Benefits lookup silently
+returned `Empty` instead of the actual record, with no error indicating
+why. Fixed with a catch-all route parameter, `resident/{source}/{*id}`,
+which accepts embedded slashes with no client-side encoding required.
+Worth flagging on its own: this bug produced a *wrong but valid-looking*
+status (`Empty`, not an exception or a 500), the exact failure mode this
+whole design is meant to prevent — caught only because the ref was known
+to genuinely exist, not because anything in the system signaled a
+problem.
+
+**Degradation proven live, not assumed:** stopped the running XML
+service mid-session, called `/residents/search` again. `candidates`
+still returned all 24 matching REST-side records unchanged,
+`sources_status.benefits_register` reported `unavailable` with a
+specific connection-failure reason, response stayed HTTP 200 — never a
+bare error, never a silently-empty result standing in for a real
+failure. Restarted the service, confirmed normal `ok`/`ok` resumed on
+both sources.
