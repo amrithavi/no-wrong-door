@@ -101,3 +101,45 @@ Four-way `SourceStatus` enum:
 ## Identity Matching
 
 Identity matching across sources is deferred because there is no shared key and a wrong-but-quiet match is worse than returning both as separate tagged candidates.
+
+## Error Handling Pattern
+
+**Chosen:** adapters never throw for expected failures (timeouts, 500s,
+malformed XML, no matching record). Every adapter call returns
+`SourceResult<T>` carrying a `SourceStatus` plus the data, or null with a
+reason. Expected failure states are values, not control flow.
+
+**Rejected:** try/catch at the assembly layer around each adapter call.
+Works, but makes it easy for a genuine bug (a real exception) to get
+silently swallowed alongside expected failures, and blurs the exact
+distinction the floor requires between "source down" and "source returned
+nothing" — both would just be caught exceptions. `SourceResult<T>` keeps
+those two cases structurally different from the start.
+
+## Field Mapping
+
+| Normalized field | Resident Index (REST) | Benefits Register (XML) |
+|---|---|---|
+| Source | literal `"resident_index"` | literal `"benefits_register"` |
+| SourceId | `id` | `Ref` |
+| FullName | `first_name` + `last_name` joined | `Name` split on `", "`, reversed |
+| DateOfBirth | `date_of_birth` | `Born` |
+| AddressLine | `address_line` | `Addr` |
+| City | `city` | `Town` |
+| Phone | `phone` | *(not present — null)* |
+| ProgramStatus | `program_status` | *(not present — null)* |
+| LastContact | `last_contact` | *(not present — null)* |
+| BenefitCode | *(not present — null)* | `BenefitCode` |
+| ReviewDue | *(not present — null)* | `ReviewDue` |
+
+**Chosen:** a field present in only one source is left `null` on records
+from the other source, never defaulted to a placeholder string. This keeps
+"this source doesn't track this field" structurally distinct from "this
+source returned empty" — the same distinction the Source Status Model
+draws at the record level, applied here at the field level.
+
+**Known risk, not fixed:** `Name` parsing on the XML side assumes exactly
+one comma, `"LAST, First"` format. A name with a suffix, a hyphenated
+surname with its own comma, or no comma at all will parse wrong rather
+than fail loudly — it won't throw, it'll just produce a bad `FullName`.
+Flagging this now rather than after it's found in testing.
