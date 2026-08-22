@@ -68,3 +68,36 @@ scored search results — identity matching across sources is an explicit
 stretch goal, not the floor; scoring candidates against each other edges into
 that territory before the floor is met. Candidates are returned flat and
 tagged by source; the human decides if two candidates are the same person.
+
+## API Contract
+
+- `GET /resident/{source}/{id}`
+- `GET /residents/search?name=&dob=`
+- `GET /health`
+
+## Source Status Model
+
+Four-way `SourceStatus` enum:
+- `Ok`: source responded with valid data
+- `Empty`: source responded successfully but has no matching record
+- `Malformed`: source responded but data was unparseable/unexpected shape
+- `Unavailable`: source did not respond successfully (down, timed out, or retries exhausted)
+
+## Degradation Strategy
+
+| Failure | Caller gets | How they know |
+|---|---|---|
+| Resident Index down | Benefits data only, resident_index marked unavailable | sources_status field in response |
+| Benefits Register down (retries exhausted) | Resident data only, benefits_register marked unavailable with retry count noted | sources_status field in response |
+| Benefits Register returns malformed XML | Same shape response, status malformed, not retried | sources_status field with reason |
+| Source has no matching record | status empty, record null | explicitly distinct from unavailable |
+| Both sources down | Empty candidates list, both sources marked unavailable | still returns HTTP 200, never a bare error |
+
+## Retry Policy
+
+- **Benefits Register**: retry only on HTTP 500, max 2 retries (3 attempts total), ~3 second timeout per call.
+- **Resident Index**: no retries; 404 and bad page parameters are client errors, not retried.
+
+## Identity Matching
+
+Identity matching across sources is deferred because there is no shared key and a wrong-but-quiet match is worse than returning both as separate tagged candidates.
