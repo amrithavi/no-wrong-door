@@ -36,3 +36,13 @@ asserts, not just the reported result.
 - Recon (Phase 0) — running the services, observing the pagination
   duplicate and the XML 500 firsthand — was done manually, not delegated.
 
+Caught a genuine agent-introduced bug in the Benefits adapter: a misread
+of the Python source led to `record.Element("n")` instead of
+`record.Element("Name")`, silently routing every real record to
+`Malformed`. Caught because the test asserted `Ok` on live search results
+rather than just "no exception" — 20/20 came back `Malformed`,
+surfacing it immediately. Resolved by checking the raw live HTTP response
+directly rather than trusting either the agent's or the author's reading
+of the source. Distinct from the earlier placeholder-test issue: that one
+was a test-quality problem, this one was a real implementation bug the
+test suite was strong enough to catch.

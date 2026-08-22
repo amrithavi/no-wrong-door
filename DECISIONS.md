@@ -161,3 +161,21 @@ were larger.
 `SourceId`s across full pagination; both known boundary-duplicate IDs
 (`R-10594`, `R-10057`) present exactly once; unknown ID returns `Empty`.
 Confirmed via terminal logs that all 27 pages were actually hit, twice.
+
+## Benefits Register Adapter
+
+**Chosen:** Polly retry restricted to HTTP 500 only, max 2 retries (3
+attempts total), ~3s timeout per attempt — matches the retry policy
+already logged, now actually implemented against it. `GetByRefAsync`
+URL-encodes the reference to handle slash-containing refs like
+`NO/2019/4234`. All 7 expected XML fields are validated before a record
+is returned as `Ok`; any missing or invalid field routes to `Malformed`
+rather than returning a partially-trusted record.
+
+**Verified against the live service, not assumed:** valid records return
+`Ok`, unknown ref returns `Empty`, a ref round-tripped through
+search→lookup confirmed the URL-encoding actually works end to end, and
+20 repeated live calls all resolved to a valid status with no unhandled
+exception — confirming the retry/timeout path is genuinely exercised
+against the service's real ~15% failure rate, not just reachable in
+theory.
