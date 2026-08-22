@@ -254,3 +254,15 @@ inflated the test count without adding meaning.
 All 9 tests are real and pass. Floor proven against live services, live
 routing, and deterministic unit tests — not assumed from build success
 or agent-reported "tests passed" summaries alone.
+
+## Phase 5 — Clean Clone Check
+
+Closed all running terminals, followed only `README.md` step by step
+with no commands run from memory: started both mock services fresh,
+confirmed health; started the API fresh, confirmed it still listens on
+`:5220` as documented rather than a different port on a truly cold run;
+ran the 4 example commands from the "Test the endpoints" section
+verbatim, all returned expected results; ran `dotnet test`, all 9 tests
+passed against the freshly-started services and API. README proven
+accurate and complete for a first-time user, not assumed correct because
+it was written correctly.
