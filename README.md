@@ -22,7 +22,7 @@ python rest_service.py --port 8081
 In a **second terminal**:
 ```powershell
 cd services
-python xml_service.py --port 8082
+python xml_service.py --port 8082 --failure-rate 0.40
 ```
 
 Confirm both are healthy:
@@ -39,8 +39,9 @@ cd src/NoWrongDoor.Api
 dotnet run
 ```
 
-Confirm it's listening (default `http://localhost:5220`, check the console
-output for the actual port).
+Confirm it's listening on `http://localhost:5220` (the default for this
+project). If your console output shows a different port, substitute it
+into every command in the next section.
 
 ## 3. Test the endpoints
 
@@ -74,10 +75,21 @@ dotnet test
 - No identity matching across sources — a search returns separate, tagged
   candidates per source; the caller decides if two candidates are the same
   person. See `DECISIONS.md` for rationale.
-- The Benefits Register (XML) source has no server-side search, so
-  `SearchAsync` on that adapter fetches the full record set per call.
-- No caching or circuit breaking implemented (see `DECISIONS.md`,
-  "If you have time" section, for what was deliberately deferred).
+- **The Benefits Register is intentionally running at a 40% failure rate.**
+  This is expected, permanent behavior, not a bug — roughly 2 in 5 calls to
+  that source will legitimately return `Unavailable`. The API and test
+  suite are both designed around this; a call returning degraded data is
+  normal, not a sign something's broken.
+- XML name parsing assumes a `"LAST, First"` format with exactly one comma.
+  A suffix, a hyphenated surname, or no comma will produce a
+  wrong-but-plausible name rather than an error. Not fixed — see
+  `DECISIONS.md`.
+- Neither source has server-side search; both adapters fetch and filter
+  the full record set per search call. Fine at current data volume (620 /
+  540 records), would need redesign at meaningfully larger scale.
+- No authentication or authorization on any endpoint.
+- No caching or circuit breaking implemented — see `DECISIONS.md`'s
+  closing summary for what was deliberately deferred and why.
 
 ## Documentation
 
